@@ -1,10 +1,7 @@
 package com.example.data.model
 
-import androidx.annotation.Keep
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.IgnoreExtraProperties
-import com.google.firebase.firestore.ServerTimestamp
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 sealed interface UiState<out T> {
     data object Loading : UiState<Nothing>
@@ -37,11 +34,9 @@ enum class FieldType(val label: String) {
     }
 }
 
-@Keep
-@IgnoreExtraProperties
+@Entity(tableName = "patients")
 data class PatientRecord(
-    @DocumentId val id: String = "",
-    val userId: String = "",
+    @PrimaryKey val id: String = "",
     val mrdNo: String = "",
     val fullName: String = "",
     val gender: String = "Male",
@@ -62,8 +57,8 @@ data class PatientRecord(
     val attendantMobile: String = "",
     val extraNotes: String = "",
     val ocrConfidence: Long? = null,
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    val createdAtMillis: Long = 0L,
+    val updatedAtMillis: Long = 0L
 ) {
     fun resolveMapping(mappingKey: String): String = when (mappingKey.lowercase()) {
         "mrdno", "mrd", "uhid" -> mrdNo
@@ -89,8 +84,6 @@ data class PatientRecord(
     }
 }
 
-@Keep
-@IgnoreExtraProperties
 data class TemplateField(
     val key: String = "",
     val label: String = "",
@@ -99,23 +92,11 @@ data class TemplateField(
     val defaultValue: String = "",
     val section: String = "General",
     val patientMapping: String = ""
-) {
-    fun toFirestoreMap(): Map<String, Any> = mapOf(
-        "key" to key.trim().ifBlank { label.lowercase().replace(Regex("[^a-z0-9]+"), "_").take(40) },
-        "label" to label.trim().take(100),
-        "fieldType" to FieldType.fromRaw(fieldType).name,
-        "unit" to unit.trim().take(80),
-        "defaultValue" to defaultValue.trim().take(300),
-        "section" to section.trim().ifBlank { "General" }.take(80),
-        "patientMapping" to patientMapping.trim().take(40)
-    )
-}
+)
 
-@Keep
-@IgnoreExtraProperties
+@Entity(tableName = "form_templates")
 data class FormTemplate(
-    @DocumentId val id: String = "",
-    val userId: String = "",
+    @PrimaryKey val id: String = "",
     val templateKey: String = "",
     val name: String = "",
     val category: String = FormCategory.CUSTOM.name,
@@ -125,12 +106,10 @@ data class FormTemplate(
     val footerText: String = "",
     val builtIn: Boolean = false,
     val fields: List<TemplateField> = emptyList(),
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    val createdAtMillis: Long = 0L,
+    val updatedAtMillis: Long = 0L
 )
 
-@Keep
-@IgnoreExtraProperties
 data class FilledFieldEntry(
     val key: String = "",
     val label: String = "",
@@ -138,22 +117,11 @@ data class FilledFieldEntry(
     val unit: String = "",
     val section: String = "General",
     val fieldType: String = FieldType.TEXT.name
-) {
-    fun toFirestoreMap(): Map<String, Any> = mapOf(
-        "key" to key.take(64),
-        "label" to label.take(100),
-        "value" to value.take(1000),
-        "unit" to unit.take(80),
-        "section" to section.take(80),
-        "fieldType" to FieldType.fromRaw(fieldType).name
-    )
-}
+)
 
-@Keep
-@IgnoreExtraProperties
+@Entity(tableName = "filled_forms")
 data class FilledFormRecord(
-    @DocumentId val id: String = "",
-    val userId: String = "",
+    @PrimaryKey val id: String = "",
     val patientId: String = "",
     val patientName: String = "",
     val patientMrdNo: String = "",
@@ -173,8 +141,8 @@ data class FilledFormRecord(
     val footerText: String = "",
     val entries: List<FilledFieldEntry> = emptyList(),
     val notes: String = "",
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    val createdAtMillis: Long = 0L,
+    val updatedAtMillis: Long = 0L
 )
 
 data class FieldAccuracy(

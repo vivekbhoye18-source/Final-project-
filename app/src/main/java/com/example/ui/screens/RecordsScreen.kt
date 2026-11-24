@@ -60,6 +60,7 @@ import com.example.ui.components.CategoryBadge
 import com.example.ui.components.ClinicalSectionHeader
 import com.example.ui.components.WardEmptyState
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -191,7 +192,7 @@ fun RecordsScreen(
                             icon = Icons.Rounded.FolderOpen,
                             title = if (allRecords.isEmpty()) "No saved forms yet" else "No matching form records",
                             subtitle = if (allRecords.isEmpty()) {
-                                "Select a patient or template and tap Save to build your searchable cloud archive of LFT, RFT, CBC, Surgery Specimen, and HMIS Discharge PDFs."
+                                "Select a patient or template and tap Save to build your searchable on-device archive of LFT, RFT, CBC, Surgery Specimen, and HMIS Discharge PDFs."
                             } else {
                                 "Try clearing your search or category filter."
                             }
@@ -251,10 +252,10 @@ private fun RecordCard(
     onShare: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val dateLabel = remember(record.updatedAt, record.createdAt) {
-        val ts = record.updatedAt ?: record.createdAt
-        if (ts != null) {
-            SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(ts.toDate())
+    val dateLabel = remember(record.updatedAtMillis, record.createdAtMillis) {
+        val ts = record.updatedAtMillis.takeIf { it > 0L } ?: record.createdAtMillis
+        if (ts > 0L) {
+            SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(ts))
         } else "Just now"
     }
 

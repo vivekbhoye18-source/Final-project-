@@ -12,7 +12,6 @@ import com.example.data.model.OcrExtractionResult
 import com.example.data.model.PatientRecord
 import com.example.data.model.TemplateImportResult
 import com.example.data.model.UiState
-import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,20 +41,15 @@ sealed interface TemplateImportState {
 
 class WardViewModel(
     private val repository: WardRepository,
-    private val ocrService: OcrAiService,
-    private val currentUserId: String
+    private val ocrService: OcrAiService
 ) : ViewModel() {
 
-    val patientsState: StateFlow<UiState<List<PatientRecord>>> = repository.observePatients(currentUserId)
+    val patientsState: StateFlow<UiState<List<PatientRecord>>> = repository.observePatients()
         .map<List<PatientRecord>, UiState<List<PatientRecord>>> { UiState.Success(it) }
         .catch { error ->
-            val firestoreError = generateSequence(error) { it.cause }
-                .filterIsInstance<FirebaseFirestoreException>()
-                .firstOrNull()
-            if (firestoreError == null && error is CancellationException) throw error
-            val root = firestoreError ?: error
-            Log.w(TAG, "Error observing patients", root)
-            emit(UiState.Error(root.message ?: "Failed to load patient database."))
+            if (error is CancellationException) throw error
+            Log.w(TAG, "Error observing patients", error)
+            emit(UiState.Error(error.message ?: "Failed to load patient database."))
         }
         .stateIn(
             scope = viewModelScope,
@@ -63,16 +57,12 @@ class WardViewModel(
             initialValue = UiState.Loading
         )
 
-    val templatesState: StateFlow<UiState<List<FormTemplate>>> = repository.observeTemplates(currentUserId)
+    val templatesState: StateFlow<UiState<List<FormTemplate>>> = repository.observeTemplates()
         .map<List<FormTemplate>, UiState<List<FormTemplate>>> { UiState.Success(it) }
         .catch { error ->
-            val firestoreError = generateSequence(error) { it.cause }
-                .filterIsInstance<FirebaseFirestoreException>()
-                .firstOrNull()
-            if (firestoreError == null && error is CancellationException) throw error
-            val root = firestoreError ?: error
-            Log.w(TAG, "Error observing templates", root)
-            emit(UiState.Error(root.message ?: "Failed to load form templates."))
+            if (error is CancellationException) throw error
+            Log.w(TAG, "Error observing templates", error)
+            emit(UiState.Error(error.message ?: "Failed to load form templates."))
         }
         .stateIn(
             scope = viewModelScope,
@@ -80,16 +70,12 @@ class WardViewModel(
             initialValue = UiState.Loading
         )
 
-    val filledFormsState: StateFlow<UiState<List<FilledFormRecord>>> = repository.observeFilledForms(currentUserId)
+    val filledFormsState: StateFlow<UiState<List<FilledFormRecord>>> = repository.observeFilledForms()
         .map<List<FilledFormRecord>, UiState<List<FilledFormRecord>>> { UiState.Success(it) }
         .catch { error ->
-            val firestoreError = generateSequence(error) { it.cause }
-                .filterIsInstance<FirebaseFirestoreException>()
-                .firstOrNull()
-            if (firestoreError == null && error is CancellationException) throw error
-            val root = firestoreError ?: error
-            Log.w(TAG, "Error observing filled forms", root)
-            emit(UiState.Error(root.message ?: "Failed to load saved form records."))
+            if (error is CancellationException) throw error
+            Log.w(TAG, "Error observing filled forms", error)
+            emit(UiState.Error(error.message ?: "Failed to load saved form records."))
         }
         .stateIn(
             scope = viewModelScope,
@@ -111,7 +97,7 @@ class WardViewModel(
 
     init {
         viewModelScope.launch {
-            repository.seedDefaultTemplatesIfEmpty(currentUserId)
+            repository.seedDefaultTemplatesIfEmpty()
         }
     }
 
@@ -248,18 +234,12 @@ class WardViewModel(
     fun restoreDefaultTemplates() {
         viewModelScope.launch {
             _isSaving.value = true
-            val builtIns = com.example.data.DefaultTemplates.builtInTemplates()
-            var anyError: String? = null
-            for (tpl in builtIns) {
-                val res = repository.saveTemplate(tpl.copy(id = "tpl_${tpl.templateKey}"))
-                if (res.isFailure) {
-                    // If document doesn't exist yet, create via seed or fresh doc
-                    val createRes = repository.saveTemplate(tpl)
-                    if (createRes.isFailure) anyError = createRes.exceptionOrNull()?.localizedMessage
-                }
-            }
+            val result = repository.restoreDefaultTemplates()
             _isSaving.value = false
-            _events.tryEmit(anyError ?: "Standard hospital templates restored.")
+            result.fold(
+                onSuccess = { _events.tryEmit("Standard hospital templates restored.") },
+                onFailure = { err -> _events.tryEmit(err.localizedMessage ?: "Failed to restore templates.") }
+            )
         }
     }
 
