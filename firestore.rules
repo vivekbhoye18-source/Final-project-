@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function optionalString(data, key, maxLen) {
+      return !(key in data) || data[key] == null || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isValidPatientRecord(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.mrdNo is string && data.mrdNo.size() >= 1 && data.mrdNo.size() <= 64 &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 160 &&
+             data.gender is string && data.gender in ['Male', 'Female', 'Other', 'Unknown'] &&
+             optionalString(data, 'age', 40) &&
+             optionalString(data, 'ipdId', 64) &&
+             optionalString(data, 'abhaId', 64) &&
+             optionalString(data, 'department', 100) &&
+             optionalString(data, 'unit', 60) &&
+             optionalString(data, 'wardBed', 100) &&
+             optionalString(data, 'admittingDoctor', 120) &&
+             optionalString(data, 'admissionDate', 64) &&
+             optionalString(data, 'mobile', 32) &&
+             optionalString(data, 'address', 400) &&
+             optionalString(data, 'mlcNumber', 80) &&
+             optionalString(data, 'diagnosis', 500) &&
+             optionalString(data, 'attendantName', 120) &&
+             optionalString(data, 'attendantRelation', 60) &&
+             optionalString(data, 'attendantMobile', 32) &&
+             optionalString(data, 'extraNotes', 1000) &&
+             (!('ocrConfidence' in data) || data.ocrConfidence == null || (data.ocrConfidence is int && data.ocrConfidence >= 0 && data.ocrConfidence <= 100)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFormTemplate(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.templateKey is string && data.templateKey.size() >= 1 && data.templateKey.size() <= 64 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+             data.category is string && data.category in ['LAB', 'SURGERY', 'DISCHARGE', 'CUSTOM'] &&
+             optionalString(data, 'hospitalHeader', 240) &&
+             optionalString(data, 'departmentSubtitle', 160) &&
+             optionalString(data, 'description', 300) &&
+             optionalString(data, 'footerText', 300) &&
+             data.builtIn is bool &&
+             data.fields is list && data.fields.size() <= 60 &&
+             (data.fields.size() == 0 || data.fields[0] is map) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFilledFormRecord(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.patientId is string && data.patientId.size() >= 1 && data.patientId.size() <= 128 &&
+             data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 160 &&
+             data.patientMrdNo is string && data.patientMrdNo.size() >= 1 && data.patientMrdNo.size() <= 64 &&
+             optionalString(data, 'patientGender', 32) &&
+             optionalString(data, 'patientAge', 40) &&
+             optionalString(data, 'patientWardBed', 100) &&
+             optionalString(data, 'patientDepartment', 100) &&
+             optionalString(data, 'patientDoctor', 120) &&
+             optionalString(data, 'patientIpdId', 64) &&
+             optionalString(data, 'patientAdmissionDate', 64) &&
+             optionalString(data, 'patientMlcNumber', 80) &&
+             data.templateId is string && data.templateId.size() >= 1 && data.templateId.size() <= 128 &&
+             data.templateName is string && data.templateName.size() >= 1 && data.templateName.size() <= 120 &&
+             data.templateCategory is string && data.templateCategory in ['LAB', 'SURGERY', 'DISCHARGE', 'CUSTOM'] &&
+             optionalString(data, 'hospitalHeader', 240) &&
+             optionalString(data, 'departmentSubtitle', 160) &&
+             optionalString(data, 'footerText', 300) &&
+             data.entries is list && data.entries.size() <= 60 &&
+             (data.entries.size() == 0 || data.entries[0] is map) &&
+             optionalString(data, 'notes', 1000) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/patients/{patientId} {
+      allow list: if isOwner(userId);
+      allow get, delete: if isOwner(userId) && isValidId(patientId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(patientId) &&
+                       incoming().keys().hasAll(['userId', 'mrdNo', 'fullName', 'gender', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'mrdNo', 'fullName', 'gender', 'age', 'ipdId', 'abhaId',
+                         'department', 'unit', 'wardBed', 'admittingDoctor', 'admissionDate',
+                         'mobile', 'address', 'mlcNumber', 'diagnosis', 'attendantName',
+                         'attendantRelation', 'attendantMobile', 'extraNotes', 'ocrConfidence',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidPatientRecord(incoming());
+
+      allow update: if isValidPatientRecord(incoming()) &&
+                       isOwner(userId) &&
+                       isValidId(patientId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'mrdNo', 'fullName', 'gender', 'age', 'ipdId', 'abhaId',
+                         'department', 'unit', 'wardBed', 'admittingDoctor', 'admissionDate',
+                         'mobile', 'address', 'mlcNumber', 'diagnosis', 'attendantName',
+                         'attendantRelation', 'attendantMobile', 'extraNotes', 'ocrConfidence',
+                         'updatedAt'
+                       ]);
+    }
+
+    match /users/{userId}/templates/{templateId} {
+      allow list: if isOwner(userId);
+      allow get, delete: if isOwner(userId) && isValidId(templateId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(templateId) &&
+                       incoming().keys().hasAll(['userId', 'templateKey', 'name', 'category', 'builtIn', 'fields', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'templateKey', 'name', 'category', 'hospitalHeader',
+                         'departmentSubtitle', 'description', 'footerText', 'builtIn', 'fields',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidFormTemplate(incoming());
+
+      allow update: if isValidFormTemplate(incoming()) &&
+                       isOwner(userId) &&
+                       isValidId(templateId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'templateKey', 'name', 'category', 'hospitalHeader',
+                         'departmentSubtitle', 'description', 'footerText', 'builtIn', 'fields',
+                         'updatedAt'
+                       ]);
+    }
+
+    match /users/{userId}/filledForms/{formId} {
+      allow list: if isOwner(userId);
+      allow get, delete: if isOwner(userId) && isValidId(formId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(formId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'patientId', 'patientName', 'patientMrdNo',
+                         'templateId', 'templateName', 'templateCategory', 'entries',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'patientId', 'patientName', 'patientMrdNo', 'patientGender',
+                         'patientAge', 'patientWardBed', 'patientDepartment', 'patientDoctor',
+                         'patientIpdId', 'patientAdmissionDate', 'patientMlcNumber',
+                         'templateId', 'templateName', 'templateCategory', 'hospitalHeader',
+                         'departmentSubtitle', 'footerText', 'entries', 'notes',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidFilledFormRecord(incoming());
+
+      allow update: if isValidFilledFormRecord(incoming()) &&
+                       isOwner(userId) &&
+                       isValidId(formId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'patientId', 'patientName', 'patientMrdNo', 'patientGender',
+                         'patientAge', 'patientWardBed', 'patientDepartment', 'patientDoctor',
+                         'patientIpdId', 'patientAdmissionDate', 'patientMlcNumber',
+                         'templateId', 'templateName', 'templateCategory', 'hospitalHeader',
+                         'departmentSubtitle', 'footerText', 'entries', 'notes',
+                         'updatedAt'
+                       ]);
+    }
+  }
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="pdf_exports" path="pdfs/" />
+    <cache-path name="camera_scans" path="scans/" />
+    <files-path name="saved_pdfs" path="pdfs/" />
+</paths>

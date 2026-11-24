@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "PatientRecord": {
+      "title": "PatientRecord",
+      "description": "Hospital patient demographic, admission, MLC, and attendant record stored per authenticated clinician.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "mrdNo": { "type": "string", "description": "MRD / UHID / MRN number." },
+        "fullName": { "type": "string", "description": "Patient full name." },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Other", "Unknown"], "description": "Patient gender." },
+        "age": { "type": "string", "description": "Patient age string (e.g. 40Y 0M 1D)." },
+        "ipdId": { "type": "string", "description": "IPD admission number." },
+        "abhaId": { "type": "string", "description": "ABHA health ID." },
+        "department": { "type": "string", "description": "Clinical department." },
+        "unit": { "type": "string", "description": "Clinical unit." },
+        "wardBed": { "type": "string", "description": "Ward and bed number." },
+        "admittingDoctor": { "type": "string", "description": "Admitting physician name." },
+        "admissionDate": { "type": "string", "description": "Admission date and time." },
+        "mobile": { "type": "string", "description": "Patient mobile phone." },
+        "address": { "type": "string", "description": "Patient residential address." },
+        "mlcNumber": { "type": "string", "description": "Medico-legal case / EPR number." },
+        "diagnosis": { "type": "string", "description": "Provisional or final diagnosis." },
+        "attendantName": { "type": "string", "description": "Attendant full name." },
+        "attendantRelation": { "type": "string", "description": "Attendant relationship to patient." },
+        "attendantMobile": { "type": "string", "description": "Attendant phone number." },
+        "extraNotes": { "type": "string", "description": "Additional ward notes or alerts." },
+        "ocrConfidence": { "type": "integer", "description": "Overall OCR extraction accuracy score (0-100)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["userId", "mrdNo", "fullName", "gender", "createdAt", "updatedAt"]
+    },
+    "FormTemplate": {
+      "title": "FormTemplate",
+      "description": "Reusable and editable hospital clinical form template (LFT, RFT, CBC, Surgery Specimen, HMIS Discharge Card, or custom imported template).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "templateKey": { "type": "string", "description": "Stable identifier slug for the template." },
+        "name": { "type": "string", "description": "Form template title." },
+        "category": { "type": "string", "enum": ["LAB", "SURGERY", "DISCHARGE", "CUSTOM"], "description": "Template clinical category." },
+        "hospitalHeader": { "type": "string", "description": "Hospital name printed on the PDF header." },
+        "departmentSubtitle": { "type": "string", "description": "Hospital address or department subtitle." },
+        "description": { "type": "string", "description": "Short summary of the form template." },
+        "footerText": { "type": "string", "description": "Signature line and footer text on the PDF." },
+        "builtIn": { "type": "boolean", "description": "Whether the template originated from built-in hospital presets." },
+        "fields": { "type": "array", "description": "Ordered list of template field definitions (max 60)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["userId", "templateKey", "name", "category", "builtIn", "fields", "createdAt", "updatedAt"]
+    },
+    "FilledFormRecord": {
+      "title": "FilledFormRecord",
+      "description": "Completed clinical form saved for a patient, ready for PDF export, printing, and record keeping.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "patientId": { "type": "string", "description": "Referenced PatientRecord document ID." },
+        "patientName": { "type": "string", "description": "Snapshot of patient full name." },
+        "patientMrdNo": { "type": "string", "description": "Snapshot of patient MRD/UHID number." },
+        "patientGender": { "type": "string", "description": "Snapshot of patient gender." },
+        "patientAge": { "type": "string", "description": "Snapshot of patient age." },
+        "patientWardBed": { "type": "string", "description": "Snapshot of patient ward/bed." },
+        "patientDepartment": { "type": "string", "description": "Snapshot of patient department." },
+        "patientDoctor": { "type": "string", "description": "Snapshot of admitting doctor." },
+        "patientIpdId": { "type": "string", "description": "Snapshot of patient IPD ID." },
+        "patientAdmissionDate": { "type": "string", "description": "Snapshot of admission date." },
+        "patientMlcNumber": { "type": "string", "description": "Snapshot of MLC number." },
+        "templateId": { "type": "string", "description": "Referenced FormTemplate document ID." },
+        "templateName": { "type": "string", "description": "Snapshot of form title." },
+        "templateCategory": { "type": "string", "enum": ["LAB", "SURGERY", "DISCHARGE", "CUSTOM"], "description": "Category of the form." },
+        "hospitalHeader": { "type": "string", "description": "Hospital header for PDF rendering." },
+        "departmentSubtitle": { "type": "string", "description": "Subtitle for PDF rendering." },
+        "footerText": { "type": "string", "description": "Footer and signature text for PDF rendering." },
+        "entries": { "type": "array", "description": "Ordered list of completed field entries (max 60)." },
+        "notes": { "type": "string", "description": "Additional clinical notes for this form." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp (FieldValue.serverTimestamp())." }
+      },
+      "required": ["userId", "patientId", "patientName", "patientMrdNo", "templateId", "templateName", "templateCategory", "entries", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/patients/{patientId}": {
+      "schema": { "$ref": "#/entities/PatientRecord" },
+      "description": "Clinician-owned hospital patient records."
+    },
+    "/users/{userId}/templates/{templateId}": {
+      "schema": { "$ref": "#/entities/FormTemplate" },
+      "description": "Clinician-owned customizable and imported clinical form templates."
+    },
+    "/users/{userId}/filledForms/{formId}": {
+      "schema": { "$ref": "#/entities/FilledFormRecord" },
+      "description": "Clinician-owned completed patient forms for PDF export and printing."
+    }
+  }
+}
