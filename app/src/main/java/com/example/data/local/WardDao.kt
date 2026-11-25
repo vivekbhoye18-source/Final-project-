@@ -32,6 +32,9 @@ interface WardDao {
     @Query("SELECT COUNT(*) FROM form_templates")
     suspend fun countTemplates(): Int
 
+    @Query("SELECT id FROM form_templates")
+    suspend fun getAllTemplateIds(): List<String>
+
     @Query("SELECT * FROM form_templates WHERE id = :id LIMIT 1")
     suspend fun getTemplateById(id: String): FormTemplate?
 

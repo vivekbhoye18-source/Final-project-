@@ -93,8 +93,23 @@ class WardRepository(
 
     suspend fun seedDefaultTemplatesIfEmpty(): Result<Unit> {
         return try {
-            if (dao.countTemplates() > 0) return Result.success(Unit)
-            restoreDefaultTemplates()
+            val existingIds = dao.getAllTemplateIds().toSet()
+            val now = System.currentTimeMillis()
+            val missingBuiltIns = DefaultTemplates.builtInTemplates()
+                .map { tpl ->
+                    tpl.copy(
+                        id = "tpl_${tpl.templateKey}",
+                        category = FormCategory.fromRaw(tpl.category).name,
+                        createdAtMillis = now,
+                        updatedAtMillis = now
+                    )
+                }
+                .filter { it.id !in existingIds }
+
+            if (missingBuiltIns.isNotEmpty()) {
+                dao.upsertTemplates(missingBuiltIns)
+            }
+            Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -146,7 +161,7 @@ class WardRepository(
                 departmentSubtitle = template.departmentSubtitle.trim().take(160),
                 description = template.description.trim().take(300),
                 footerText = template.footerText.trim().take(300),
-                fields = template.fields.take(60),
+                fields = template.fields.take(100),
                 createdAtMillis = existing?.createdAtMillis?.takeIf { it > 0L } ?: now,
                 updatedAtMillis = now
             )
@@ -195,17 +210,21 @@ class WardRepository(
                 patientAge = record.patientAge.trim().take(40),
                 patientWardBed = record.patientWardBed.trim().take(100),
                 patientDepartment = record.patientDepartment.trim().take(100),
+                patientUnit = record.patientUnit.trim().take(60),
                 patientDoctor = record.patientDoctor.trim().take(120),
                 patientIpdId = record.patientIpdId.trim().take(64),
                 patientAdmissionDate = record.patientAdmissionDate.trim().take(64),
                 patientMlcNumber = record.patientMlcNumber.trim().take(80),
+                patientAddress = record.patientAddress.trim().take(400),
+                patientMobile = record.patientMobile.trim().take(32),
                 templateId = record.templateId.trim().take(128),
+                templateKey = record.templateKey.trim().take(64),
                 templateName = record.templateName.trim().take(120),
                 templateCategory = FormCategory.fromRaw(record.templateCategory).name,
                 hospitalHeader = record.hospitalHeader.trim().take(240),
                 departmentSubtitle = record.departmentSubtitle.trim().take(160),
                 footerText = record.footerText.trim().take(300),
-                entries = record.entries.take(60),
+                entries = record.entries.take(100),
                 notes = record.notes.trim().take(1000),
                 createdAtMillis = existing?.createdAtMillis?.takeIf { it > 0L } ?: now,
                 updatedAtMillis = now

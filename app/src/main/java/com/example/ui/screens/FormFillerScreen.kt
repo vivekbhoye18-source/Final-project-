@@ -60,6 +60,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.data.DefaultTemplates
 import com.example.data.model.FieldType
 import com.example.data.model.FilledFieldEntry
 import com.example.data.model.FilledFormRecord
@@ -69,6 +70,8 @@ import com.example.pdf.PdfPrintAndShareHelper
 import com.example.ui.components.CategoryBadge
 import com.example.ui.components.ClinicalSectionHeader
 import com.example.ui.components.PatientDemographicsBanner
+import com.example.ui.theme.EmeraldContainer
+import com.example.ui.theme.OnEmeraldContainer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,11 +183,15 @@ fun FormFillerScreen(
             patientAge = pt?.age ?: existingRecord?.patientAge.orEmpty(),
             patientWardBed = pt?.wardBed ?: existingRecord?.patientWardBed.orEmpty(),
             patientDepartment = pt?.department ?: existingRecord?.patientDepartment.orEmpty(),
+            patientUnit = pt?.unit ?: existingRecord?.patientUnit.orEmpty(),
             patientDoctor = pt?.admittingDoctor ?: existingRecord?.patientDoctor.orEmpty(),
             patientIpdId = pt?.ipdId ?: existingRecord?.patientIpdId.orEmpty(),
             patientAdmissionDate = pt?.admissionDate ?: existingRecord?.patientAdmissionDate.orEmpty(),
             patientMlcNumber = pt?.mlcNumber ?: existingRecord?.patientMlcNumber.orEmpty(),
+            patientAddress = pt?.address ?: existingRecord?.patientAddress.orEmpty(),
+            patientMobile = pt?.mobile ?: existingRecord?.patientMobile.orEmpty(),
             templateId = tpl?.id ?: existingRecord?.templateId.orEmpty(),
+            templateKey = tpl?.templateKey ?: existingRecord?.templateKey.orEmpty(),
             templateName = tpl?.name ?: existingRecord?.templateName.orEmpty(),
             templateCategory = tpl?.category ?: existingRecord?.templateCategory.orEmpty(),
             hospitalHeader = tpl?.hospitalHeader ?: existingRecord?.hospitalHeader.orEmpty(),
@@ -309,9 +316,28 @@ fun FormFillerScreen(
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                             )
                             val cat = selectedTemplate?.category ?: existingRecord?.templateCategory
-                            if (!cat.isNullOrBlank()) {
-                                Spacer(Modifier.height(4.dp))
-                                CategoryBadge(categoryRaw = cat)
+                            val activeKey = selectedTemplate?.templateKey ?: existingRecord?.templateKey.orEmpty()
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                if (!cat.isNullOrBlank()) {
+                                    CategoryBadge(categoryRaw = cat)
+                                }
+                                if (activeKey in DefaultTemplates.EXACT_HOSPITAL_LAYOUT_KEYS) {
+                                    Surface(
+                                        color = EmeraldContainer,
+                                        contentColor = OnEmeraldContainer,
+                                        shape = MaterialTheme.shapes.extraSmall
+                                    ) {
+                                        Text(
+                                            text = "Exact A4 Print Form",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                         if (existingRecord == null && allTemplates.isNotEmpty()) {

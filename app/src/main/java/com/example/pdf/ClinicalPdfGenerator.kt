@@ -36,6 +36,36 @@ object ClinicalPdfGenerator {
     private val INK_DARK = Color.parseColor("#0F1F24")
     private val INK_MUTED = Color.parseColor("#475E66")
 
+    private fun resolveExactLayoutKey(record: FilledFormRecord): String? {
+        val rawKey = record.templateKey.trim().lowercase()
+        val rawId = record.templateId.trim().lowercase()
+        val rawName = record.templateName.trim().lowercase()
+
+        return when {
+            rawKey == DefaultTemplates.KEY_PATHOLOGY_REPORT ||
+                rawId.contains(DefaultTemplates.KEY_PATHOLOGY_REPORT) ||
+                (rawName.contains("pathology") && rawName.contains("cbc")) -> DefaultTemplates.KEY_PATHOLOGY_REPORT
+
+            rawKey == DefaultTemplates.KEY_BIOCHEMISTRY_PROFILE ||
+                rawId.contains(DefaultTemplates.KEY_BIOCHEMISTRY_PROFILE) ||
+                rawName.contains("biochemistry profile") -> DefaultTemplates.KEY_BIOCHEMISTRY_PROFILE
+
+            rawKey == DefaultTemplates.KEY_BACTERIOLOGY_REQUEST ||
+                rawId.contains(DefaultTemplates.KEY_BACTERIOLOGY_REQUEST) ||
+                rawName.contains("bacteriology") -> DefaultTemplates.KEY_BACTERIOLOGY_REQUEST
+
+            rawKey == DefaultTemplates.KEY_SEROLOGY_REQUEST ||
+                rawId.contains(DefaultTemplates.KEY_SEROLOGY_REQUEST) ||
+                rawName.contains("serology") -> DefaultTemplates.KEY_SEROLOGY_REQUEST
+
+            rawKey == DefaultTemplates.KEY_HIV_CONSENT ||
+                rawId.contains(DefaultTemplates.KEY_HIV_CONSENT) ||
+                rawName.contains("hiv") -> DefaultTemplates.KEY_HIV_CONSENT
+
+            else -> null
+        }
+    }
+
     fun generatePdfFile(context: Context, record: FilledFormRecord): File {
         val dir = File(context.cacheDir, "pdfs").apply { mkdirs() }
         val safeMrd = record.patientMrdNo.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(24)
@@ -45,6 +75,29 @@ object ClinicalPdfGenerator {
 
         val pdf = PdfDocument()
         try {
+            val exactLayoutKey = resolveExactLayoutKey(record)
+            if (exactLayoutKey != null) {
+                val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
+                val page = pdf.startPage(pageInfo)
+                when (exactLayoutKey) {
+                    DefaultTemplates.KEY_PATHOLOGY_REPORT ->
+                        PathologyBiochemPdfRenderer.drawPathologyReportPdf(page.canvas, record)
+                    DefaultTemplates.KEY_BIOCHEMISTRY_PROFILE ->
+                        PathologyBiochemPdfRenderer.drawBiochemistryProfilePdf(page.canvas, record)
+                    DefaultTemplates.KEY_BACTERIOLOGY_REQUEST ->
+                        MicrobiologyHivPdfRenderer.drawBacteriologyRequestPdf(page.canvas, record)
+                    DefaultTemplates.KEY_SEROLOGY_REQUEST ->
+                        MicrobiologyHivPdfRenderer.drawSerologyRequestPdf(page.canvas, record)
+                    DefaultTemplates.KEY_HIV_CONSENT ->
+                        MicrobiologyHivPdfRenderer.drawHivConsentPdf(page.canvas, record)
+                }
+                pdf.finishPage(page)
+                FileOutputStream(outFile).use { fos ->
+                    pdf.writeTo(fos)
+                }
+                return outFile
+            }
+
             var pageNum = 1
             var pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNum).create()
             var page = pdf.startPage(pageInfo)

@@ -60,6 +60,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.data.DefaultTemplates
 import com.example.data.model.FormCategory
 import com.example.data.model.FormTemplate
 import com.example.data.model.TemplateImportResult
@@ -150,7 +151,7 @@ fun TemplatesScreen(
         item(key = "header") {
             ClinicalSectionHeader(
                 title = "Clinical Form Templates",
-                subtitle = "Edit LFT, RFT, CBC, Surgery Specimen & HMIS Discharge formats or import custom hospital forms."
+                subtitle = "Exact GGMC Pathology, Biochemistry (LFT/RFT), Bacteriology, Serology & HIV Consent A4 forms, plus Surgery & HMIS Discharge."
             )
         }
 
@@ -495,7 +496,13 @@ private fun TemplateCard(
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                if (template.builtIn) {
+                if (template.templateKey in DefaultTemplates.EXACT_HOSPITAL_LAYOUT_KEYS) {
+                    Text(
+                        text = "EXACT A4",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (template.builtIn) {
                     Text(
                         text = "STANDARD",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
